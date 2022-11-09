@@ -8,7 +8,7 @@
 WindowWidth = 30;  
 ProbMaskThreshold = -1; 
 NumWindows= 30; 
-BoundaryWidth = -1;
+BoundaryWidth = 1;
 
 % Load images:
 fpath = '../input';
@@ -41,8 +41,6 @@ else
     imshow(mask)
 end
 
-size(images{1})
-size(mask)
 
 imshow(imoverlay(images{1}, boundarymask(mask,8),'red'));
 % ! what is getframe ? why image size change
@@ -50,10 +48,10 @@ set(gca,'position',[0 0 1 1],'units','normalized')
 F = getframe(gcf);
 
 [I,~] = frame2im(F);
-imwrite(I, fullfile(fpath, strip(imageNames(1,:))));
-outputVideo = VideoWriter(fullfile(fpath,'video.mp4'),'MPEG-4');
-open(outputVideo);
-writeVideo(outputVideo,I);
+%imwrite(I, fullfile(fpath, strip(imageNames(1,:))));
+%outputVideo = VideoWriter(fullfile(fpath,'video.mp4'),'MPEG-4');
+%open(outputVideo);
+%writeVideo(outputVideo,I);
 
 % Sample local windows and initialize shape+color models:
 [mask_outline, LocalWindows] = initLocalWindows(images{1},mask,NumWindows,WindowWidth,true);
@@ -62,11 +60,12 @@ ColorModels = ...
     initColorModels(images{1},mask,mask_outline,LocalWindows,BoundaryWidth,WindowWidth);
 
 % You should set these parameters yourself:
-fcutoff = -1;
-SigmaMin = -1;
-SigmaMax = -1;
+fcutoff = 0.4;
+SigmaMin = 1;
+SigmaMax = 5;
 R = -1;
 A = -1;
+
 ShapeConfidences = ...
     initShapeConfidences(LocalWindows,ColorModels,...
     WindowWidth, SigmaMin, A, fcutoff, R);
@@ -80,7 +79,12 @@ set(gca,'position',[0 0 1 1],'units','normalized')
 F = getframe(gcf);
 [I,~] = frame2im(F);
 
-showColorConfidences(images{1},mask_outline,ColorModels.Confidences,LocalWindows,WindowWidth);
+ColorConfidences = {};
+for i= 1:size(ColorModels ,2)
+    ColorConfidences{1,i}= ColorModels{i}.ColorConfidence;
+end
+
+%showColorConfidences(images{1},mask_outline,ColorConfidences,LocalWindows,WindowWidth);
 
 %%% MAIN LOOP %%%
 % Process each frame in the video.
@@ -131,19 +135,19 @@ for prev=1:(length(files)-1)
 
     % Write video frame:
     imshow(imoverlay(images{curr}, boundarymask(mask,8), 'red'));
-    set(gca,'position',[0 0 1 1],'units','normalized')
-    F = getframe(gcf);
-    [I,~] = frame2im(F);
-    imwrite(I, fullfile(fpath, strip(imageNames(curr,:))));
-    writeVideo(outputVideo,I);
+    %set(gca,'position',[0 0 1 1],'units','normalized')
+    %F = getframe(gcf);
+    %[I,~] = frame2im(F);
+    %imwrite(I, fullfile(fpath, strip(imageNames(curr,:))));
+    %writeVideo(outputVideo,I);
 
     imshow(images{curr})
     hold on
     showLocalWindows(LocalWindows,WindowWidth,'r.');
     hold off
-    set(gca,'position',[0 0 1 1],'units','normalized')
-    F = getframe(gcf);
-    [I,~] = frame2im(F);
+    %set(gca,'position',[0 0 1 1],'units','normalized')
+    %F = getframe(gcf);
+    %[I,~] = frame2im(F);
 end
 
-close(outputVideo);
+%close(outputVideo);

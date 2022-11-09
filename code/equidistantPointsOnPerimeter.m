@@ -10,8 +10,8 @@ cumulative_dist_along_path = [0; cumsum(dist_from_vertex_to_vertex,1)];
 dist_steps = linspace(0, cumulative_dist_along_path(end), num_points);
 points = interp1(cumulative_dist_along_path, xy, dist_steps);
 
-x = points(:,1);
-y = points(:,2);
+x = points(:,1)
+y = points(:,2)
 
 end
 
