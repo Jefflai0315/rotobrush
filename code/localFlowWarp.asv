@@ -65,25 +65,25 @@ for i=1:size(LocalWindows,1)
             continue;
         end
         
-        NewLocalWindows(i, 1) = round(LocalWindows(i, 1) + avgVx);
-        NewLocalWindows(i, 2) = round(LocalWindows(i, 2) + avgVy);
+        LocalWindows(i, 1) = round(LocalWindows(i, 1) + avgVx);
+        LocalWindows(i, 2) = round(LocalWindows(i, 2) + a
     
    
     %avg_Vx = ceil(sum(sum(Vx)));
     %avg_Vy = ceil(sum(sum(Vy)));
-    %avg_Vx = (mean(mean(Vx,2,'omitnan'),1,'omitnan'));
-   % avg_Vy = (mean(mean(Vy,2,'omitnan'),1,'omitnan'));
-    %if(isnan(avg_Vx))
-    %    avg_Vx = 0;
-    %end
-    %if(isnan(avg_Vy))
-   %     avg_Vy = 0;
-    %end
+    avg_Vx = (mean(mean(Vx,2,'omitnan'),1,'omitnan'));
+    avg_Vy = (mean(mean(Vy,2,'omitnan'),1,'omitnan'));
+    if(isnan(avg_Vx))
+        avg_Vx = 0;
+    end
+    if(isnan(avg_Vy))
+        avg_Vy = 0;
+    end
     %sprintf(['avg' num2str(i) 'is: ' num2str(avg_Vy)])
     
-    %window = [(window(1) + avg_Vx), ...
-    %    (window(2) + avg_Vy)]; 
-    %NewLocalWindows(i,:) = window;
+    window = [(window(1) + avg_Vx), ...
+        (window(2) + avg_Vy)]; 
+    NewLocalWindows(i,:) = window;
 end
 
 

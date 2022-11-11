@@ -5,10 +5,10 @@
 % Feel free to modify this code as you see fit.
 
 % Some parameters you need to tune:
-WindowWidth = 30;  
-ProbMaskThreshold = -1; 
+WindowWidth = 60;  
+ProbMaskThreshold = 0.35; 
 NumWindows= 30; 
-BoundaryWidth = 1;
+BoundaryWidth = 3;
 
 % Load images:
 fpath = '../input';
@@ -60,11 +60,11 @@ ColorModels = ...
     initColorModels(images{1},mask,mask_outline,LocalWindows,BoundaryWidth,WindowWidth);
 
 % You should set these parameters yourself:
-fcutoff = 0.4;
+fcutoff = 0.85;
 SigmaMin = 1;
-SigmaMax = 5;
-R = -1;
-A = -1;
+SigmaMax = WindowWidth;
+R = 2;
+A = (SigmaMax-SigmaMin)/((1-fcutoff)^R);
 
 ShapeConfidences = ...
     initShapeConfidences(LocalWindows,ColorModels,...

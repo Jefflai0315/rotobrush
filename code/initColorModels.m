@@ -37,9 +37,9 @@ for i = 1:numWindows
     ColorModels{i}.X_bg = X_bg;
    
   
-    options = statset('MaxIter',1000);
-    GMM_fg = fitgmdist(X_fg,3,'RegularizationValue',0.01, 'Options', options);
-    GMM_bg = fitgmdist(X_bg,3,'RegularizationValue',0.01, 'Options', options);
+    options = statset('MaxIter',1500);
+    GMM_fg = fitgmdist(X_fg,3,'RegularizationValue',0.001, 'Options', options);
+    GMM_bg = fitgmdist(X_bg,3,'RegularizationValue',0.001, 'Options', options);
 
     f = pdf(GMM_fg,window_flat);
     b = pdf(GMM_bg,window_flat);
@@ -50,14 +50,14 @@ for i = 1:numWindows
     fb = f_ ./ (f_ + b_);
     ColorModels{i}.ColorModel = fb;
     
-    sprintf(['generated ' num2str(i)])
-    imshow(mask)
-    b_w = cell2mat(bwboundaries(mask));
-    edge = zeros([WindowWidth WindowWidth]);
-    for j=1:size(b_w, 1)
-        edge(b_w(j,1),b_w(j,2)) = 1;
-    end
-    imshow(edge)
+    %sprintf(['generated ' num2str(i)])
+    %imshow(mask)
+    %b_w = cell2mat(bwboundaries(mask));
+    %edge = zeros([WindowWidth WindowWidth]);
+    %for j=1:size(b_w, 1)
+    %    edge(b_w(j,1),b_w(j,2)) = 1;
+    %end
+    %imshow(edge)
     imshow(maskOutline)
     ColorModels{i}.BoundryEdge = maskOutline;
     

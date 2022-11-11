@@ -26,20 +26,20 @@ for i = 1:numWindows
     a_fg = a_(mask==255);
     b_fg = b_(mask==255);
     X_fg = [L_fg a_fg b_fg];
-    ColorModels{i}.Fg = (mask==255)
+    ColorModels{i}.Fg = (mask==255);
     ColorModels{i}.X_fg = X_fg;
 
     L_bg = L_(mask ==0);
     a_bg = a_(mask ==0);
     b_bg = b_(mask ==0);
     X_bg = [L_bg a_bg b_bg];
-    ColorModels{i}.Fg = (mask==0)
+    ColorModels{i}.Bg = (mask==0);
     ColorModels{i}.X_bg = X_bg;
    
   
-    options = statset('MaxIter',1000);
-    GMM_fg = fitgmdist(X_fg,3,'RegularizationValue',0.01, 'Options', options);
-    GMM_bg = fitgmdist(X_bg,3,'RegularizationValue',0.01, 'Options', options);
+    options = statset('MaxIter',1500);
+    GMM_fg = fitgmdist(X_fg,3,'RegularizationValue',0.001, 'Options', options);
+    GMM_bg = fitgmdist(X_bg,3,'RegularizationValue',0.001, 'Options', options);
 
     f = pdf(GMM_fg,window_flat);
     b = pdf(GMM_bg,window_flat);
@@ -63,7 +63,7 @@ for i = 1:numWindows
     
     %colorconfident 
     %D = bwdist(edge);
-    
+    D = bwdist(maskOutline);
     Wc = exp(-(D.^2)/((WindowWidth)/2)^2);
     Lt = double(mask/255);
     Pc = fb;

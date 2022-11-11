@@ -5,7 +5,13 @@ function ColorModels = initShapeConfidences(LocalWindows, ColorModels, WindowWid
 for i = 1: size(LocalWindows,1)
     bw = ColorModels{i}.BoundryEdge;
     D = bwdist(bw);
-    Wc = exp(-(D.^2)/(SigmaMin)^2);
+    fc = ColorModels{i}.ColorConfidence;
+    if fcutoff < fc
+        SigmaS = SigmaMin + A*(fc - fcutoff)^R;
+    else
+        SigmaS = SigmaMin;
+    end
+    Wc = exp(-(D.^2)/(SigmaS)^2);
     Fs = 1 - Wc;
     ColorModels{i}.ShapeModel = Fs;
 end
