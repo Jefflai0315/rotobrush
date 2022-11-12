@@ -5,7 +5,8 @@ function ColorModels = initColorModels(IMG, Mask, MaskOutline, LocalWindows, Bou
 ColorModels = {};
 numWindows = size(LocalWindows,1);
 IMG = rgb2lab(IMG);
-d = bwdist(MaskOutline);
+% emphasize the importance of dist of pixels from boundary 
+d = bwdist(MaskOutline)/1.5;
 % get the colour of local windows using (localwindows,mask and img)
 for k = 1:numWindows
     pc = [];
@@ -25,18 +26,21 @@ for k = 1:numWindows
             if d(y,x) < BoundaryWidth
                 continue
             end
-            if Mask(y,x) == 255
+           
+            if Mask(y,x) == 255 || Mask(y,x) == 1
                F(end+1,:) = IMG(y,x,:);
             else
                B(end+1,:) = IMG(y,x,:);
             end
         end
     end
+    
 
 
-   
-    Fgmm = fitgmdist(F, 3, 'RegularizationValue', .001, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
-    Bgmm = fitgmdist(B, 3, 'RegularizationValue', .001, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
+    ColorModels{k}.fgData1 = F;
+    ColorModels{k}.bgData1 = B;
+    Fgmm = fitgmdist(F, 3, 'RegularizationValue', .01, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
+    Bgmm = fitgmdist(B, 3, 'RegularizationValue', .01, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
     
     sigma_s = WindowWidth/2;
 
@@ -65,14 +69,9 @@ for k = 1:numWindows
     ColorModels{k}.backGMM = Bgmm;
     ColorModels{k}.pc = pcs;
     ColorModels{k}.BoundryEdge = MaskOutline(yRange,xRange);
-   % Confidences{end+1} = fc;
-    %foreGMM{end+1} = Fgmm;
-    %backGMM{end+1} = Bgmm;
+
 end
-%ColorModels.Confidences = Confidences;
-%ColorModels.foreGMM = foreGMM;
-%ColorModels.backGMM = backGMM;
-%ColorModels.pcs = pcs;
+
 
 end
 

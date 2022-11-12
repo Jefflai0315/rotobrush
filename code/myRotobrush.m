@@ -1,17 +1,15 @@
 % MyRotobrush.m  - UMD CMSC426, Fall 2018
-% This is the main script of your rotobrush project.
-% We've included an outline of what you should be doing, and some helful visualizations.
-% However many of the most important functions are left for you to implement.
-% Feel free to modify this code as you see fit.
 
-% Some parameters you need to tune:
-WindowWidth = 40;  
-ProbMaskThreshold = 0.55; 
+WindowWidth = 80;  
+ProbMaskThreshold = 0.35; 
 NumWindows= 40; 
-BoundaryWidth = 3;
+BoundaryWidth = 2;
 
-% Load images:
-fpath = '../input';
+%% Load images by changing fpath and mask_number
+fpath = '../frames/Frames3';
+mask_number = '3';
+
+
 files = dir(fullfile(fpath, '*.jpg'));
 imageNames = zeros(length(files),1);
 images = cell(length(files),1);
@@ -29,41 +27,43 @@ for i=1:length(files)
 end
 
 % NOTE: to save time during development, you should save/load your mask rather than use ROIPoly every time.
-
-if exist('../input/Mask1.png')
-    mask = imread('../input/Mask1.png');
+if exist(strcat(fpath, '/../Mask',mask_number,'.png'))
+    mask = imread(strcat(fpath, '/../Mask',mask_number,'.png'));
     mask = mask(:,:,1);
 else
     mask = roipoly(images{1});
     size(mask)
-    filename=['Contour ', '1', '.jpg'];
+    filename=['../','frames/','Mask', mask_number '.png'];
     imwrite(mask,filename);
     imshow(mask)
 end
 
 
 imshow(imoverlay(images{1}, boundarymask(mask,8),'red'));
-% ! what is getframe ? why image size change
 set(gca,'position',[0 0 1 1],'units','normalized')
 F = getframe(gcf);
-
 [I,~] = frame2im(F);
 %imwrite(I, fullfile(fpath, strip(imageNames(1,:))));
-%outputVideo = VideoWriter(fullfile(fpath,'video.mp4'),'MPEG-4');
-%open(outputVideo);
-%writeVideo(outputVideo,I);
 
-% Sample local windows and initialize shape+color models:
+
+%% output frame 1 to video 
+outputVideo = VideoWriter(fullfile(fpath,'video.mp4'),'MPEG-4');
+open(outputVideo);
+writeVideo(outputVideo,I);
+
+
+
+%% Sample local windows and initialize shape+color models:
 [mask_outline, LocalWindows] = initLocalWindows(images{1},mask,NumWindows,WindowWidth,true);
 
 ColorModels = ...
     initColorModels(images{1},mask,mask_outline,LocalWindows,BoundaryWidth,WindowWidth);
 
 % You should set these parameters yourself:
-fcutoff = 0.85;
-SigmaMin = 5;
+fcutoff = 0.80;
+SigmaMin = 2;
 SigmaMax = WindowWidth;
-R = 2.2;
+R = 2;
 A = (SigmaMax-SigmaMin)/((1-fcutoff)^R);
 
 ShapeConfidences = ...
@@ -87,7 +87,7 @@ end
 
 %showColorConfidences(images{1},mask_outline,ColorConfidences,LocalWindows,WindowWidth);
 
-%%% MAIN LOOP %%%
+%% MAIN LOOP %%
 % Process each frame in the video.
 for prev=1:(length(files)-1)
     curr = prev+1;
@@ -133,23 +133,25 @@ for prev=1:(length(files)-1)
         BoundaryWidth ...
     );
 
-    %mask_outline = bwperim(mask,4);
-
-    % Write video frame:
+    
+    %% Write video frame:
     imshow(imoverlay(images{curr}, boundarymask(mask,8), 'red'));
-    %set(gca,'position',[0 0 1 1],'units','normalized')
-    %F = getframe(gcf);
-    %[I,~] = frame2im(F);
+    % pause(1)
+    set(gca,'position',[0 0 1 1],'units','normalized')
+    F = getframe(gcf);
+    [I,~] = frame2im(F);
     %imwrite(I, fullfile(fpath, strip(imageNames(curr,:))));
-    %writeVideo(outputVideo,I);
-
+    writeVideo(outputVideo,I);
+    
+    
     imshow(images{curr})
     hold on
     showLocalWindows(LocalWindows,WindowWidth,'r.');
+    
     hold off
-    %set(gca,'position',[0 0 1 1],'units','normalized')
-    %F = getframe(gcf);
-    %[I,~] = frame2im(F);
+    set(gca,'position',[0 0 1 1],'units','normalized')
+    F = getframe(gcf);
+    [I,~] = frame2im(F);
 end
 
-%close(outputVideo);
+close(outputVideo);

@@ -3,13 +3,18 @@ function [NewLocalWindows] = localFlowWarp(WarpedPrevFrame, CurrentFrame, LocalW
 
 % TODO
 NewLocalWindows = LocalWindows;
-opticFlow = opticalFlowFarneback();
-flow = estimateFlow(opticFlow, rgb2gray(WarpedPrevFrame));
+opticFlow = opticalFlowFarneback('NeighborhoodSize',7);
+estimateFlow(opticFlow, rgb2gray(WarpedPrevFrame));
 flow = estimateFlow(opticFlow, rgb2gray(CurrentFrame));
+dist= bwdist(Mask);
+imshow(CurrentFrame)
+hold on
+plot(flow,'DecimationFactor',[5 5],'ScaleFactor',10);
+hold off
+%pause(0.5)
 
 
 %% test transform forward
-
 
 imshow(CurrentFrame)
 hold on
@@ -31,59 +36,45 @@ for i=1:size(LocalWindows,1)
     YY = Y + Width;
     if(XX >= size(CurrentFrame,2))
         XX = size(CurrentFrame,2);
-        X = XX -(Width);
-       
+        X = XX -(Width);   
     end
-    
+     if(X <1)
+        X = 1;
+        XX = Width;
+    end
     if(YY >= size(CurrentFrame,1))
-    YY = size(CurrentFrame,1);
-    Y = YY - Width;
+        YY = size(CurrentFrame,1);
+        Y = YY - Width;
     end
-   
+    if(Y < 1)
+        Y = 1;
+        YY = Width;
+    end
+
+
     Vx = flow.Vx;
     Vy = flow.Vy; 
-    Vx(Mask == 0) = NaN;
+    Vx(Mask == 0 | dist > 30 ) = NaN;
     Vx = Vx(Y:YY,X:XX);
-    Vy(Mask == 0) = NaN;
+    Vy(Mask == 0 | dist > 30 ) = NaN;
     Vy = Vy(Y:YY,X:XX);
 
-    [yf,xf] = find(Mask(Y:YY,X:XX));
 
-    size_ = length(yf);
-        foreX = [];
-        foreY = [];
+    avgVx = (mean(mean(Vx,2,'omitnan'),1,'omitnan'));
+    avgVy = (mean(mean(Vy,2,'omitnan'),1,'omitnan'));
 
-        for j = 1:size_
-            foreX = [foreX Vx(yf(j),xf(j))];
-            foreY = [foreY Vy(yf(j),xf(j))];
-        end
-        
-        avgVx = sum(foreX)/length(foreX);
-        avgVy = sum(foreY)/length(foreY);
-        
-        if isnan(avgVx) || isnan(avgVy)
-            continue;
-        end
-        
-        NewLocalWindows(i, 1) = round(LocalWindows(i, 1) + avgVx);
-        NewLocalWindows(i, 2) = round(LocalWindows(i, 2) + avgVy);
+    if isnan(avgVy)
+        avgVy = 0;
+    end
+    if isnan(avgVx)
+        avgVx= 0;
+    end
+
+    NewLocalWindows(i, 1) = round(LocalWindows(i, 1) + avgVx);
+    NewLocalWindows(i, 2) = round(LocalWindows(i, 2) + avgVy);
     
    
-    %avg_Vx = ceil(sum(sum(Vx)));
-    %avg_Vy = ceil(sum(sum(Vy)));
-    %avg_Vx = (mean(mean(Vx,2,'omitnan'),1,'omitnan'));
-   % avg_Vy = (mean(mean(Vy,2,'omitnan'),1,'omitnan'));
-    %if(isnan(avg_Vx))
-    %    avg_Vx = 0;
-    %end
-    %if(isnan(avg_Vy))
-   %     avg_Vy = 0;
-    %end
-    %sprintf(['avg' num2str(i) 'is: ' num2str(avg_Vy)])
     
-    %window = [(window(1) + avg_Vx), ...
-    %    (window(2) + avg_Vy)]; 
-    %NewLocalWindows(i,:) = window;
 end
 
 

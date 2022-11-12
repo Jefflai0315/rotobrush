@@ -34,17 +34,13 @@ function [WarpedFrame, WarpedMask, WarpedMaskOutline, WarpedLocalWindows] = calc
 
 img1 = IMG1;
 img2 = IMG2;
-%%
-%%temp
-%img1 = imageSet{2};
-%img2 = imageSet{3};
-%wSize = 30;
+
 
 %% Detect Transformation
 temp_img = rgb2gray(img1);
 temp_img2 = rgb2gray(img2);
-pts1 = detectSURFFeatures(temp_img,'MetricThreshold',200);
-pts2 = detectSURFFeatures(temp_img2,'MetricThreshold',200);
+pts1 = detectSURFFeatures(temp_img,"MetricThreshold",200);
+pts2 = detectSURFFeatures(temp_img2,"MetricThreshold",200);
 [ft1,vpoints1] = extractFeatures(rgb2gray(img1), pts1);
 [ft2,vpoints2] = extractFeatures(rgb2gray(img2),pts2);
 
@@ -55,20 +51,22 @@ pts2 = detectSURFFeatures(temp_img2,'MetricThreshold',200);
 % hold off
 % 
  idxpair = matchFeatures(ft1,ft2);
- matchedPoints1 = vpoints1(idxpair(:, 1), :);
- matchedPoints2 = vpoints2(idxpair(:, 2), :);
+ matchedPoints1 = vpoints1(idxpair(:, 1));
+ matchedPoints2 = vpoints2(idxpair(:, 2));
 %% Estimage Geometric Transform
-tform = estimateGeometricTransform(matchedPoints2, ...
-    matchedPoints1, 'affine');
-
-%[tform,inlierIdx] = estimateGeometricTransform([x1 y1],[x2 y2],'affine');
+[tform,inlierIdx2, inlierIdx1] = estimateGeometricTransform(matchedPoints1, ...
+    matchedPoints2, 'affine');
+tform = estimateGeometricTransform(inlierIdx1, ...
+    inlierIdx2, 'affine');
 
 rout = imref2d(size(IMG2));
-WarpedFrame = imwarp(IMG1,invert(tform),'OutputView', rout);
-WarpedMask = imwarp(Mask, invert(tform),'OutputView', rout);
+WarpedFrame = imwarp(IMG1,tform,'OutputView', rout);
+WarpedMask = imwarp(Mask, tform,'OutputView', rout);
 WarpedMaskOutline = bwperim(WarpedMask,4);
 
-WarpedLocalWindows = round(transformPointsForward(invert(tform),Windows));
+WarpedLocalWindows = round(transformPointsForward(tform,Windows));
+
+%showMatchedFeatures(IMG1,IMG2,inlierIdx1,inlierIdx2)
 
 
 

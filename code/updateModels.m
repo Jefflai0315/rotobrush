@@ -33,21 +33,48 @@ tmpNum = zeros(size(warpedMask));
 tmpDenom = zeros(size(warpedMask));
 %pF = zeros(size(warpedMask));
 
-%fg_thresh = 0.75;
-%bg_thresh = 0.2;
+
 for j = 1 : size(LocalWindows,1)
     
 
     coor = windows(j,:);
     win_x= coor(1);
     win_y = coor(2);
-    xRange = (win_x-(WindowWidth/2)):(win_x+(WindowWidth/2 - 1));   
-    yRange = (win_y-(WindowWidth/2)):(win_y+(WindowWidth/2 - 1)); 
+
+    X = round(win_x-(WindowWidth/2));
+    Y = round(win_y-(WindowWidth/2));
+    XX = X + WindowWidth-1;
+    YY = Y + WindowWidth-1;
+    if(XX >= size(CurrentFrame,2))
+        XX = size(CurrentFrame,2)-1;
+        X = XX -(WindowWidth)+1;
+       
+    end
+
+     if(X <1)
+        X = 1;
+        XX = WindowWidth;
+     end
+
+    if(YY >= size(CurrentFrame,1))
+        YY = size(CurrentFrame,1)-1;
+        Y = YY -(WindowWidth)+1;
+       
+    end
+
+     if(Y <1)
+        Y = 1;
+        YY = WindowWidth;
+     end
+   
+    xRange = X:XX;   
+    yRange = Y:YY;
     IMG = K(yRange,xRange,:);
     locMask = double(warpedMask(yRange,xRange));
     fgData = [];
     bgData = [];
-    dist = bwdist(warpedMaskOutline(yRange,xRange));
+    % emphasize the importance of dist of pixels from boundary 
+    dist = bwdist(warpedMaskOutline(yRange,xRange))/1.3;
 
     for x = 1:length(xRange)
         for y = 1:length(yRange)
@@ -64,16 +91,19 @@ for j = 1 : size(LocalWindows,1)
     end
 
 
+
 %%
 %if(size(X_fg2, 1) > size(X_fg2, 2) && size(X_bg2, 1) > size(X_bg2, 2))
 if (size(fgData,1)>3)
-    foregroundGMM = fitgmdist(fgData, 3, 'RegularizationValue', 0.001, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
+    fgData = [fgData ; fgData ;ColorModels{j}.fgData1 ];
+    foregroundGMM = fitgmdist(fgData, 3, 'RegularizationValue', 0.1, 'Options', statset('MaxIter',1500,'TolFun',1e-5));  
 else
     foregroundGMM = ColorModels{j}.foreGMM;
 end
 
 if size(bgData,1) > 3
-    backgroundGMM = fitgmdist(bgData, 3, 'RegularizationValue', 0.001, 'Options', statset('MaxIter',1500,'TolFun',1e-5));   
+    bgData = [bgData ;ColorModels{j}.bgData1 ];
+    backgroundGMM = fitgmdist(bgData, 3, 'RegularizationValue', 0.1, 'Options', statset('MaxIter',1500,'TolFun',1e-5));   
 else
     backgroundGMM = ColorModels{j}.backGMM;
 end
@@ -152,6 +182,11 @@ end
     % Getting mask outline from the new mask generated above
     %mask_outline = bwperim(Mask,4);
    % imshow(mask_outline);
-   LocalWindows = NewLocalWindows
+    LocalWindows = NewLocalWindows;
+    Mask =bwareaopen(Mask, 60);
+    se = strel('line',2,0);
+    Mask = imdilate(Mask,se);
+    se = strel('line',2,90);
+    Mask = imdilate(Mask,se);
     
 end
