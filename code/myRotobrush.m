@@ -5,9 +5,9 @@
 % Feel free to modify this code as you see fit.
 
 % Some parameters you need to tune:
-WindowWidth = 60;  
-ProbMaskThreshold = 0.35; 
-NumWindows= 30; 
+WindowWidth = 40;  
+ProbMaskThreshold = 0.55; 
+NumWindows= 40; 
 BoundaryWidth = 3;
 
 % Load images:
@@ -61,9 +61,9 @@ ColorModels = ...
 
 % You should set these parameters yourself:
 fcutoff = 0.85;
-SigmaMin = 1;
+SigmaMin = 5;
 SigmaMax = WindowWidth;
-R = 2;
+R = 2.2;
 A = (SigmaMax-SigmaMin)/((1-fcutoff)^R);
 
 ShapeConfidences = ...
@@ -81,7 +81,8 @@ F = getframe(gcf);
 
 ColorConfidences = {};
 for i= 1:size(ColorModels ,2)
-    ColorConfidences{1,i}= ColorModels{i}.ColorConfidence;
+
+    ColorConfidences{1,i}= ColorModels{i}.Confidence;
 end
 
 %showColorConfidences(images{1},mask_outline,ColorConfidences,LocalWindows,WindowWidth);
@@ -128,10 +129,11 @@ for prev=1:(length(files)-1)
         fcutoff, ...
         SigmaMin, ...
         R, ...
-        A ...
+        A,...
+        BoundaryWidth ...
     );
 
-    mask_outline = bwperim(mask,4);
+    %mask_outline = bwperim(mask,4);
 
     % Write video frame:
     imshow(imoverlay(images{curr}, boundarymask(mask,8), 'red'));

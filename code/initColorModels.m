@@ -5,80 +5,77 @@ function ColorModels = initColorModels(IMG, Mask, MaskOutline, LocalWindows, Bou
 ColorModels = {};
 numWindows = size(LocalWindows,1);
 IMG = rgb2lab(IMG);
+d = bwdist(MaskOutline);
 % get the colour of local windows using (localwindows,mask and img)
-for i = 1:numWindows
-    
-    coor = LocalWindows(i,:);
+for k = 1:numWindows
+    pc = [];
+    coor = LocalWindows(k,:);
     x= coor(1);
     y = coor(2);
 
-    ymin = y-round(WindowWidth/2);
-    xmin = x-round(WindowWidth/2);
-    window = imcrop(IMG,[xmin ymin  WindowWidth-1 WindowWidth-1]);
-    mask = imcrop(Mask,[xmin ymin  WindowWidth-1 WindowWidth-1]);
-    maskOutline = imcrop(MaskOutline,[xmin ymin  WindowWidth-1 WindowWidth-1]);
+    xRange = (x-(WindowWidth/2)):(x+(WindowWidth/2 - 1));   
+    yRange = (y-(WindowWidth/2)):(y+(WindowWidth/2 - 1)); 
     
-    L_ = window(:,:,1);
-    a_ = window(:,:,2);
-    b_ = window(:,:,3);
-    window_flat = [reshape(L_,[WindowWidth^2 1]) reshape(a_,[WindowWidth^2 1]) reshape(b_,[WindowWidth^2 1])];
-    L_fg = L_(mask==255);
-    a_fg = a_(mask==255);
-    b_fg = b_(mask==255);
-    X_fg = [L_fg a_fg b_fg];
-    ColorModels{i}.Fg = (mask==255);
-    ColorModels{i}.X_fg = X_fg;
+    F = [];
+    B = [];
+    
 
-    L_bg = L_(mask ==0);
-    a_bg = a_(mask ==0);
-    b_bg = b_(mask ==0);
-    X_bg = [L_bg a_bg b_bg];
-    ColorModels{i}.Bg = (mask==0);
-    ColorModels{i}.X_bg = X_bg;
+    for x = xRange
+        for y = yRange
+            if d(y,x) < BoundaryWidth
+                continue
+            end
+            if Mask(y,x) == 255
+               F(end+1,:) = IMG(y,x,:);
+            else
+               B(end+1,:) = IMG(y,x,:);
+            end
+        end
+    end
+
+
    
-  
-    options = statset('MaxIter',1500);
-    GMM_fg = fitgmdist(X_fg,3,'RegularizationValue',0.001, 'Options', options);
-    GMM_bg = fitgmdist(X_bg,3,'RegularizationValue',0.001, 'Options', options);
-
-    f = pdf(GMM_fg,window_flat);
-    b = pdf(GMM_bg,window_flat);
-    % 
-    f_ = reshape(f, [WindowWidth WindowWidth]);
-    b_ = reshape(b, [WindowWidth WindowWidth]);
+    Fgmm = fitgmdist(F, 3, 'RegularizationValue', .001, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
+    Bgmm = fitgmdist(B, 3, 'RegularizationValue', .001, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
     
-    fb = f_ ./ (f_ + b_);
-    ColorModels{i}.ColorModel = fb;
-    
-    %sprintf(['generated ' num2str(i)])
-    %imshow(mask)
-    %b_w = cell2mat(bwboundaries(mask));
-    %edge = zeros([WindowWidth WindowWidth]);
-    %for j=1:size(b_w, 1)
-    %    edge(b_w(j,1),b_w(j,2)) = 1;
-    %end
-    %imshow(edge)
-    imshow(maskOutline)
-    ColorModels{i}.BoundryEdge = maskOutline;
-    
-    %colorconfident 
-    %D = bwdist(edge);
-    D = bwdist(maskOutline);
-    Wc = exp(-(D.^2)/((WindowWidth)/2)^2);
-    Lt = double(mask/255);
-    Pc = fb;
-    Fc_top = sum(sum(abs(Lt-Pc) .* Wc));
-    Fc_bot = sum(sum(Wc));
-    Fc = 1 - (Fc_top/Fc_bot);
-    ColorModels{i}.ColorConfidence = Fc;
+    sigma_s = WindowWidth/2;
 
 
+
+    num_sum = 0;
+    den_sum = 0;
+    % Compute color confidence for each pixel in the window
+    xcounter = 1;
+    for x=LocalWindows(k,1)-(WindowWidth/2):LocalWindows(k,1)+(WindowWidth/2 - 1)
+        ycounter = 1;
+        for y=LocalWindows(k,2)-(WindowWidth/2):LocalWindows(k,2)+(WindowWidth/2 - 1)
+            pf = pdf(Fgmm,[IMG(y,x,1), IMG(y,x,2), IMG(y,x,3)]);
+            bf = pdf(Bgmm,[IMG(y,x,1), IMG(y,x,2), IMG(y,x,3)]);
+            pc = pf/(pf+bf);
+            pcs(ycounter,xcounter) = pc;
+            num_sum = num_sum + double(abs(Mask(y,x)-pc)) * exp((-d(y,x)^2)/sigma_s^2);
+            den_sum = den_sum + exp((-d(y,x)^2)/sigma_s^2);
+            ycounter = ycounter + 1;
+        end
+        xcounter = xcounter + 1;
+    end
+    fc = 1 - (num_sum/den_sum);
+    ColorModels{k}.Confidence = fc;
+    ColorModels{k}.foreGMM =Fgmm;
+    ColorModels{k}.backGMM = Bgmm;
+    ColorModels{k}.pc = pcs;
+    ColorModels{k}.BoundryEdge = MaskOutline(yRange,xRange);
+   % Confidences{end+1} = fc;
+    %foreGMM{end+1} = Fgmm;
+    %backGMM{end+1} = Bgmm;
+end
+%ColorModels.Confidences = Confidences;
+%ColorModels.foreGMM = foreGMM;
+%ColorModels.backGMM = backGMM;
+%ColorModels.pcs = pcs;
 
 end
 
-% create for gmm , (1 for fg , 1 for bg)
 
 
-
-end
 

@@ -12,7 +12,8 @@ function [Mask, LocalWindows, ColorModels, ShapeConfidences] = ...
         fcutoff, ...
         SigmaMin, ...
         R, ...
-        A ...
+        A, ...
+        BoundaryWidth ...
     )
 % UPDATEMODELS: update shape and color models, and apply the result to generate a new mask.
 % Feel free to redefine this as several different functions if you prefer.
@@ -21,180 +22,136 @@ function [Mask, LocalWindows, ColorModels, ShapeConfidences] = ...
 %variables
 windows = NewLocalWindows;
 K = rgb2lab(CurrentFrame);
-Pf = {};
+%Pf = {};
+pFx = [];
 
 
 % calculate shapecnfidence from the new localwindows using previous bw and pc
 tmpShapeConf = initShapeConfidences(NewLocalWindows,ColorModels,WindowWidth,SigmaMin,A,fcutoff,R);
 
-fg_thresh = 0.75;
-bg_thresh = 0.2;
+tmpNum = zeros(size(warpedMask));
+tmpDenom = zeros(size(warpedMask));
+%pF = zeros(size(warpedMask));
+
+%fg_thresh = 0.75;
+%bg_thresh = 0.2;
 for j = 1 : size(LocalWindows,1)
     
 
     coor = windows(j,:);
-    x= coor(1);
-    y = coor(2);
-    ymin = y-round(WindowWidth/2);
-    xmin = x-round(WindowWidth/2);
-    window = imcrop(K,[xmin ymin  WindowWidth-1 WindowWidth-1]);
-    mask = imcrop(warpedMask,[xmin ymin  WindowWidth-1 WindowWidth-1]);
-    maskOutline = imcrop(warpedMaskOutline,[xmin ymin  WindowWidth-1 WindowWidth-1]);
+    win_x= coor(1);
+    win_y = coor(2);
+    xRange = (win_x-(WindowWidth/2)):(win_x+(WindowWidth/2 - 1));   
+    yRange = (win_y-(WindowWidth/2)):(win_y+(WindowWidth/2 - 1)); 
+    IMG = K(yRange,xRange,:);
+    locMask = double(warpedMask(yRange,xRange));
+    fgData = [];
+    bgData = [];
+    dist = bwdist(warpedMaskOutline(yRange,xRange));
 
-
-    L_ = window(:,:,1);
-    a_ = window(:,:,2);
-    b_ = window(:,:,3);
-    Kwindows_flat = [reshape(L_,[WindowWidth^2 1]) reshape(a_,[WindowWidth^2 1]) reshape(b_,[WindowWidth^2 1])];
-    L_fg = L_(mask ==255 & tmpShapeConf{j}.ColorConfidence > fg_thresh);
-    a_fg = a_(mask ==255 & tmpShapeConf{j}.ColorConfidence> fg_thresh);
-    b_fg = b_(mask ==255 & tmpShapeConf{j}.ColorConfidence> fg_thresh);
-    
-    X_fg = [L_fg a_fg b_fg];
-    X_fg2 = [X_fg; ColorModels{j}.X_fg];
-    
-    L_bg = L_(mask == 0 & tmpShapeConf{j}.ColorConfidence< bg_thresh);
-    a_bg = a_(mask == 0 & tmpShapeConf{j}.ColorConfidence< bg_thresh);
-    b_bg = b_(mask == 0 & tmpShapeConf{j}.ColorConfidence< bg_thresh);
-    X_bg = [L_bg a_bg b_bg];
-    X_bg2 = [X_bg; ColorModels{j}.X_bg];
+    for x = 1:length(xRange)
+        for y = 1:length(yRange)
+            if dist(y,x) < BoundaryWidth
+                continue
+            end
+            
+            if locMask(y,x) == 1 && tmpShapeConf{j}(y,x) >= 0.75
+                fgData(end+1,:) = IMG(y,x,:);
+            elseif locMask(y,x) == 0 && tmpShapeConf{j}(y,x) <= 0.25
+                bgData(end+1,:) = IMG(y,x,:);
+            end
+        end
+    end
 
 
 %%
 %if(size(X_fg2, 1) > size(X_fg2, 2) && size(X_bg2, 1) > size(X_bg2, 2))
-if (size(X_fg,1)<size(ColorModels{j}.X_fg,1))
-    X_fg = ColorModels{j}.X_fg;
-end
-if (size(X_bg,1)<3)
-    X_bg = ColorModels{j}.X_bg;
-end
-iter = 100;
-converged = false;
-while(converged == false)
-iter = iter + 100;
-options = statset('MaxIter',iter);
-GMM_fg = fitgmdist(X_fg,3,'RegularizationValue',0.001, 'Options', options);
-GMM_bg = fitgmdist(X_bg,3,'RegularizationValue',0.001, 'Options', options);
-%GMM_fg = fitgmdist(X_fg2,3,'RegularizationValue',0.001, 'Options', options);
-%GMM_bg = fitgmdist(X_bg2,3,'RegularizationValue',0.001, 'Options', options);
-
-converged = GMM_bg.Converged && GMM_fg.Converged;
+if (size(fgData,1)>3)
+    foregroundGMM = fitgmdist(fgData, 3, 'RegularizationValue', 0.001, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
+else
+    foregroundGMM = ColorModels{j}.foreGMM;
 end
 
-
-f = pdf(GMM_fg,Kwindows_flat);
-b = pdf(GMM_bg,Kwindows_flat);
-% 
-f_ = reshape(f, [WindowWidth WindowWidth]);
-b_ = reshape(b, [WindowWidth WindowWidth]);
-
-fb = f_ ./ (f_ + b_);
-
-if (numel(find(fb > ProbMaskThreshold)) < numel(find(ColorModels{j}.ColorModel > ProbMaskThreshold))) 
-    ColorModels{j}.ColorModel = fb;
-
-    D = bwdist(maskOutline);
-    Wc = exp(-(D.^2)/((WindowWidth)/2)^2);
-    Lt = double(mask/255);
-   
-    Fc_top = sum(sum(abs(Lt-fb) .* Wc));
-    Fc_bot = sum(sum(Wc));
-    ColorModels{j}.ColorConfidence = 1 - (Fc_top/Fc_bot);
-   % sprintf(['window ' num2str(j) ' updated'])
-    ColorModels{j}.X_fg = X_fg;
-    ColorModels{j}.X_bg = X_bg;
-
+if size(bgData,1) > 3
+    backgroundGMM = fitgmdist(bgData, 3, 'RegularizationValue', 0.001, 'Options', statset('MaxIter',1500,'TolFun',1e-5));   
+else
+    backgroundGMM = ColorModels{j}.backGMM;
 end
 
-if fcutoff < ColorModels{j}.ColorConfidence
-    SigmaS = SigmaMin + A*(ColorModels{j}.ColorConfidence - fcutoff)^R;
+datafit = reshape(IMG,WindowWidth^2,3);
+
+% Calculating probability mask with old models
+pxFold = pdf(ColorModels{j}.foreGMM,datafit);
+pxBold = pdf(ColorModels{j}.backGMM,datafit);
+valOld = pxFold./(pxFold+pxBold);
+pCXold = reshape(valOld,WindowWidth,WindowWidth);
+
+% Calculating probability mask with new models
+pxFnew = pdf(foregroundGMM,datafit);
+pxBnew = pdf(backgroundGMM,datafit);
+valNew = pxFnew./(pxFnew+pxBnew);   
+pCXnew = reshape(valNew,WindowWidth,WindowWidth);
+
+[new,~] = find(pCXnew>ProbMaskThreshold);
+[old,~] = find(pCXold>ProbMaskThreshold);
+
+
+if (length(new)<length(old))
+    weight = exp(-(dist.^2)/(WindowWidth*0.5)^2);
+    denom = sum(sum(weight));
+    numer = sum(sum(abs(locMask - pCXnew).*weight));
+    ColorModels{j}.ColorConfidence = 1 - numer/denom;
+    ColorModels{j}.foreGMM = foregroundGMM;
+    ColorModels{j}.backGMM = backgroundGMM;
+    ColorModels{j}.pcs(:,:) = pCXnew;
+else
+    ColorModels{j}.pcs(:,:) = pCXold;
+end
+
+
+%% Updating Shape Model
+        
+% Calculating the new shape confidence based on simga_s 
+if fcutoff < ColorModels{j}.Confidence
+    SigmaS = SigmaMin + A*(ColorModels{j}.Confidence - fcutoff)^R;
 else
     SigmaS = SigmaMin;
 end
-D = bwdist(maskOutline);
-ColorModels{j}.ShapeModel  = 1 - exp(-(D.^2)/((SigmaS)^2));
 
+ShapeConfidences{j}(:,:) = 1 - exp(-(dist.^2)/((SigmaS)^2));
 
-
-
-%combine 
-    fb= ColorModels{j}.ColorModel;
-    Lt = double(mask/255);
-    pf = (ColorModels{j}.ShapeModel .* Lt) + ((1-ColorModels{j}.ShapeModel).*fb); 
-    Pf{j} = pf;
-
-
+%% Merging color and shape confidences
+for x = 1:length(xRange)
+    for y =1:length(yRange)
+        pFx(j,y,x) = ShapeConfidences{j}(y,x) * locMask(y,x) + (1-ShapeConfidences{j}(y,x)) * ColorModels{j}.pcs(y,x);
+    end
 end
+        
+%% Merging windows
+        % Calculating the final foreground probability for all pixels in the image
+for y = 1:length(yRange)
+    for x = 1:length(xRange)
+        dstFromCenter = 1/(sqrt((yRange(y)-win_y)^2 + (xRange(x)-win_x)^2)+0.1);
+        tmpNum(yRange(y),xRange(x)) = tmpNum(yRange(y),xRange(x)) + double(pFx(j,y,x))*dstFromCenter;
+        tmpDenom(yRange(y),xRange(x)) = tmpDenom(yRange(y),xRange(x))+ dstFromCenter;
+    end
+end
+        
+end 
 
-canvasF = zeros(size(rgb2gray(CurrentFrame)));
-canvasSet = {};
-eps = 0.1;
-center = zeros(WindowWidth, WindowWidth);
-center(WindowWidth, WindowWidth) = 1;
-center = bwdist(center);
-canvasSet = {};
+%% Get final foreground probability mask
 
-for i=1:size(LocalWindows,1)
-    canvas = zeros(size(rgb2gray(CurrentFrame)));
-    coor = windows(i,:);
-    x= coor(1);
-    y = coor(2);
-
-    Y = round(y-round(WindowWidth/2));
-    X = round(x-round(WindowWidth/2));
-    P = Pf{i};
-    dist = abs(center + eps).^-1;
-    pF = (P.*dist)./dist;
+    % Setting up pF
+    pF = (tmpNum)./(tmpDenom);
     pF(isnan(pF))=0;
-    mask = (pF>ProbMaskThreshold);
-    canvas(Y:Y+WindowWidth-1,X:X+WindowWidth-1) =mask;
-    canvasSet{i} = canvas;
-    bw= bwperim(mask);
-    ColorModels{i}.BoundryEdge = bw;
-   
+    
+    % Getting mask from pF if above threshold
+    Mask = (pF>ProbMaskThreshold);
+    %set(gcf,'visible','off')
+
+    % Getting mask outline from the new mask generated above
+    %mask_outline = bwperim(Mask,4);
+   % imshow(mask_outline);
+   LocalWindows = NewLocalWindows
+    
 end
-
-
-for i = 1:numel(canvasSet)
-   canvasF = canvasF + canvasSet{i};
-   
-end
-
-%grayMask = mat2gray(canvasF);
-%t = WindowWidth/2;
-%for i=1:size(LocalWindows,1)
-%   pos = NewLocalWindows(1,:);
-%   X = round(pos(1));
-%   Y = round(pos(2));
-%   grayMask(Y-t:Y+t,X-t:X+t) = 0;  
-%   imshow(grayMask);
-%end
-
-%canvasF(isnan(canvasF)) = 0;
-%canvasF = canvasF + grayMask
-mask_outline = bwperim(canvasF,4);
-%fmask =imfill(canvasF,'holes');
-imshow(mask_outline)
-fmask =imfill(mask_outline,'holes');
-
-R = CurrentFrame(:,:,1);
-G = CurrentFrame(:,:,2);
-B = CurrentFrame(:,:,3);
-
-R(fmask == 0) = 0;
-G(fmask == 0) = 0;
-B(fmask == 0) = 0;
-
-final = cat(3,G,B);
-final = cat(3,R,final);
-
-Mask = fmask;
-image = final;
-imshow(image)
-
-%merge 
-LocalWindows = NewLocalWindows;
-
-
-end
-

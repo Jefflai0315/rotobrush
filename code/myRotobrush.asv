@@ -5,10 +5,10 @@
 % Feel free to modify this code as you see fit.
 
 % Some parameters you need to tune:
-WindowWidth = 30;  
-ProbMaskThreshold = -1; 
-NumWindows= 30; 
-BoundaryWidth = -1;
+WindowWidth = 40;  
+ProbMaskThreshold = 0.55; 
+NumWindows= 40; 
+BoundaryWidth = ;
 
 % Load images:
 fpath = '../input';
@@ -41,8 +41,6 @@ else
     imshow(mask)
 end
 
-size(images{1})
-size(mask)
 
 imshow(imoverlay(images{1}, boundarymask(mask,8),'red'));
 % ! what is getframe ? why image size change
@@ -62,11 +60,12 @@ ColorModels = ...
     initColorModels(images{1},mask,mask_outline,LocalWindows,BoundaryWidth,WindowWidth);
 
 % You should set these parameters yourself:
-fcutoff = -1;
-SigmaMin = 10;
-SigmaMax = -1;
-R = -1;
-A = -1;
+fcutoff = 0.80;
+SigmaMin = 3;
+SigmaMax = WindowWidth;
+R = 2;
+A = (SigmaMax-SigmaMin)/((1-fcutoff)^R);
+
 ShapeConfidences = ...
     initShapeConfidences(LocalWindows,ColorModels,...
     WindowWidth, SigmaMin, A, fcutoff, R);
@@ -82,7 +81,8 @@ F = getframe(gcf);
 
 ColorConfidences = {};
 for i= 1:size(ColorModels ,2)
-    ColorConfidences{1,i}= ColorModels{i}.ColorConfidence;
+
+    ColorConfidences{1,i}= ColorModels{i}.Confidence;
 end
 
 %showColorConfidences(images{1},mask_outline,ColorConfidences,LocalWindows,WindowWidth);
@@ -129,26 +129,27 @@ for prev=1:(length(files)-1)
         fcutoff, ...
         SigmaMin, ...
         R, ...
-        A ...
+        A,...
+        BoundaryWidth ...
     );
 
-    mask_outline = bwperim(mask,4);
+    %mask_outline = bwperim(mask,4);
 
     % Write video frame:
     imshow(imoverlay(images{curr}, boundarymask(mask,8), 'red'));
-    set(gca,'position',[0 0 1 1],'units','normalized')
-    F = getframe(gcf);
-    [I,~] = frame2im(F);
-    imwrite(I, fullfile(fpath, strip(imageNames(curr,:))));
-    writeVideo(outputVideo,I);
+    %set(gca,'position',[0 0 1 1],'units','normalized')
+    %F = getframe(gcf);
+    %[I,~] = frame2im(F);
+    %imwrite(I, fullfile(fpath, strip(imageNames(curr,:))));
+    %writeVideo(outputVideo,I);
 
     imshow(images{curr})
     hold on
     showLocalWindows(LocalWindows,WindowWidth,'r.');
     hold off
-    set(gca,'position',[0 0 1 1],'units','normalized')
-    F = getframe(gcf);
-    [I,~] = frame2im(F);
+    %set(gca,'position',[0 0 1 1],'units','normalized')
+    %F = getframe(gcf);
+    %[I,~] = frame2im(F);
 end
 
-close(outputVideo);
+%close(outputVideo);
