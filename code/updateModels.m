@@ -102,7 +102,7 @@ else
 end
 
 if size(bgData,1) > 3
-    bgData = [bgData ;ColorModels{j}.bgData1 ];
+    bgData = [bgData; bgData  ;ColorModels{j}.bgData1 ];
     backgroundGMM = fitgmdist(bgData, 3, 'RegularizationValue', 0.1, 'Options', statset('MaxIter',1500,'TolFun',1e-5));   
 else
     backgroundGMM = ColorModels{j}.backGMM;

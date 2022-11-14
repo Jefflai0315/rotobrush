@@ -1,6 +1,5 @@
 function ColorModels = initColorModels(IMG, Mask, MaskOutline, LocalWindows, BoundaryWidth, WindowWidth)
 % INITIALIZAECOLORMODELS Initialize color models.  ColorModels is a struct you should define yourself.
-%
 % Must define a field ColorModels.Confidences: a cell array of the color confidence map for each local window.
 ColorModels = {};
 numWindows = size(LocalWindows,1);
@@ -13,20 +12,15 @@ for k = 1:numWindows
     coor = LocalWindows(k,:);
     x= coor(1);
     y = coor(2);
-
     xRange = (x-(WindowWidth/2)):(x+(WindowWidth/2 - 1));   
     yRange = (y-(WindowWidth/2)):(y+(WindowWidth/2 - 1)); 
-    
     F = [];
     B = [];
-    
-
     for x = xRange
         for y = yRange
             if d(y,x) < BoundaryWidth
                 continue
             end
-           
             if Mask(y,x) == 255 || Mask(y,x) == 1
                F(end+1,:) = IMG(y,x,:);
             else
@@ -34,18 +28,13 @@ for k = 1:numWindows
             end
         end
     end
-    
-
-
+  
     ColorModels{k}.fgData1 = F;
     ColorModels{k}.bgData1 = B;
     Fgmm = fitgmdist(F, 3, 'RegularizationValue', .01, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
     Bgmm = fitgmdist(B, 3, 'RegularizationValue', .01, 'Options', statset('MaxIter',1500,'TolFun',1e-5));
     
     sigma_s = WindowWidth/2;
-
-
-
     num_sum = 0;
     den_sum = 0;
     % Compute color confidence for each pixel in the window
@@ -71,8 +60,6 @@ for k = 1:numWindows
     ColorModels{k}.BoundryEdge = MaskOutline(yRange,xRange);
 
 end
-
-
 end
 
 

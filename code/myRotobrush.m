@@ -1,14 +1,13 @@
 % MyRotobrush.m  - UMD CMSC426, Fall 2018
-
+% You should set these parameters yourself:
 WindowWidth = 80;  
 ProbMaskThreshold = 0.35; 
 NumWindows= 40; 
 BoundaryWidth = 2;
 
 %% Load images by changing fpath and mask_number
-fpath = '../frames/Frames3';
-mask_number = '3';
-
+fpath = '../input';
+mask_number = '2';
 
 files = dir(fullfile(fpath, '*.jpg'));
 imageNames = zeros(length(files),1);
@@ -33,7 +32,7 @@ if exist(strcat(fpath, '/../Mask',mask_number,'.png'))
 else
     mask = roipoly(images{1});
     size(mask)
-    filename=['../','frames/','Mask', mask_number '.png'];
+    filename=['../','Mask', mask_number '.png'];
     imwrite(mask,filename);
     imshow(mask)
 end
@@ -43,11 +42,11 @@ imshow(imoverlay(images{1}, boundarymask(mask,8),'red'));
 set(gca,'position',[0 0 1 1],'units','normalized')
 F = getframe(gcf);
 [I,~] = frame2im(F);
-%imwrite(I, fullfile(fpath, strip(imageNames(1,:))));
+imwrite(I, fullfile(strcat('../output/' ,strip(imageNames(1,:)))));
 
 
-%% output frame 1 to video 
-outputVideo = VideoWriter(fullfile(fpath,'video.mp4'),'MPEG-4');
+%% output frame1 to video 
+outputVideo = VideoWriter(fullfile(strcat('../','result', mask_number,'.mp4')),'MPEG-4');
 open(outputVideo);
 writeVideo(outputVideo,I);
 
@@ -79,12 +78,10 @@ set(gca,'position',[0 0 1 1],'units','normalized')
 F = getframe(gcf);
 [I,~] = frame2im(F);
 
-ColorConfidences = {};
-for i= 1:size(ColorModels ,2)
-
-    ColorConfidences{1,i}= ColorModels{i}.Confidence;
-end
-
+%ColorConfidences = {};
+%for i= 1:size(ColorModels ,2)
+%    ColorConfidences{1,i}= ColorModels{i}.Confidence;
+%end
 %showColorConfidences(images{1},mask_outline,ColorConfidences,LocalWindows,WindowWidth);
 
 %% MAIN LOOP %%
@@ -96,6 +93,7 @@ for prev=1:(length(files)-1)
     %%% Global affine transform between previous and current frames:
     [warpedFrame, warpedMask, warpedMaskOutline, warpedLocalWindows] = calculateGlobalAffine(images{prev}, images{curr}, mask, LocalWindows);
     
+
     %%% Calculate and apply local warping based on optical flow:
     NewLocalWindows = ...
         localFlowWarp(warpedFrame, images{curr}, warpedLocalWindows,warpedMask,WindowWidth);
@@ -136,11 +134,11 @@ for prev=1:(length(files)-1)
     
     %% Write video frame:
     imshow(imoverlay(images{curr}, boundarymask(mask,8), 'red'));
-    % pause(1)
+    pause(1)
     set(gca,'position',[0 0 1 1],'units','normalized')
     F = getframe(gcf);
     [I,~] = frame2im(F);
-    %imwrite(I, fullfile(fpath, strip(imageNames(curr,:))));
+    imwrite(I, fullfile(strcat('../output/' ,strip(imageNames(curr,:)))));
     writeVideo(outputVideo,I);
     
     
@@ -155,3 +153,4 @@ for prev=1:(length(files)-1)
 end
 
 close(outputVideo);
+disp('DONE')

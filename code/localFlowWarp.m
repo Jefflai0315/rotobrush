@@ -6,14 +6,11 @@ NewLocalWindows = LocalWindows;
 opticFlow = opticalFlowFarneback('NeighborhoodSize',7);
 estimateFlow(opticFlow, rgb2gray(WarpedPrevFrame));
 flow = estimateFlow(opticFlow, rgb2gray(CurrentFrame));
-dist= bwdist(Mask);
 imshow(CurrentFrame)
 hold on
 plot(flow,'DecimationFactor',[5 5],'ScaleFactor',10);
 hold off
 %pause(0.5)
-
-
 %% test transform forward
 
 imshow(CurrentFrame)
@@ -25,41 +22,35 @@ for i=1:size(LocalWindows,1)    %plot the windows
 end
 hold off
 
-
-
 for i=1:size(LocalWindows,1)
     window = LocalWindows(i,:);
-
     X = round(window(1)-(Width/2));
     Y = round(window(2)-(Width/2));
-    XX = X + Width;
-    YY = Y + Width;
+    XX = X + Width-1;
+    YY = Y + Width-1;
     if(XX >= size(CurrentFrame,2))
-        XX = size(CurrentFrame,2);
-        X = XX -(Width);   
+        XX = size(CurrentFrame,2)-1;
+        X = XX -(Width)+1;   
     end
      if(X <1)
         X = 1;
         XX = Width;
     end
     if(YY >= size(CurrentFrame,1))
-        YY = size(CurrentFrame,1);
-        Y = YY - Width;
+        YY = size(CurrentFrame,1)-1;
+        Y = YY - Width+1;
     end
     if(Y < 1)
         Y = 1;
         YY = Width;
     end
 
-
     Vx = flow.Vx;
     Vy = flow.Vy; 
-    Vx(Mask == 0 | dist > 30 ) = NaN;
+    Vx(Mask == 0 ) = NaN;
     Vx = Vx(Y:YY,X:XX);
-    Vy(Mask == 0 | dist > 30 ) = NaN;
+    Vy(Mask == 0  ) = NaN;
     Vy = Vy(Y:YY,X:XX);
-
-
     avgVx = (mean(mean(Vx,2,'omitnan'),1,'omitnan'));
     avgVy = (mean(mean(Vy,2,'omitnan'),1,'omitnan'));
 
@@ -72,11 +63,8 @@ for i=1:size(LocalWindows,1)
 
     NewLocalWindows(i, 1) = round(LocalWindows(i, 1) + avgVx);
     NewLocalWindows(i, 2) = round(LocalWindows(i, 2) + avgVy);
-    
-   
-    
+  
 end
-
 
 
 imshow(CurrentFrame)
@@ -87,8 +75,6 @@ for i=1:size(LocalWindows,1)    %plot the windows
     plot(pos(1), pos(2),'.','Color', 'r');
 end
 hold off
-
-
 
 end
 

@@ -1,37 +1,5 @@
 function [WarpedFrame, WarpedMask, WarpedMaskOutline, WarpedLocalWindows] = calculateGlobalAffine(IMG1,IMG2,Mask,Windows)
 % CALCULATEGLOBALAFFINE: finds affine transform between two frames, and applies it to frame1, the mask, and local windows.
-    
-% find matching feature points on the object in the two frames
-%[F,D] = vl_sift(single(rgb2gray(IMG1)));
-%[F2,D2] = vl_sift(single(rgb2gray(IMG2)));
-
-%[MATCHES,SCORES] = vl_ubcmatch(D, D2,2);
-
-
-%x1 = F(1,MATCHES(1,:))';
-%y1 = F(2,MATCHES(1,:))';
-%x2 = F2(1,MATCHES(2,:))'+  size(IMG1,2);
-%y2 = F2(2,MATCHES(2,:))';
-
-
-%figure;
-%imagesc(cat(2, IMG1, IMG2))
-
-%hold on;
-%h = line([x1'; x2'], [y1'; y2']);
-%set(h,'linewidth', 1, 'color', 'b');
-
-%// Use VL_FEAT method to show the actual features
-%// themselves on top of the lines
-%vl_plotframe(F(:,MATCHES(1,:)));
-%fb2 = F2; %// Make a copy so we don't mutate the original
-%fb2(1,:) = fb2(1,:) + size(IMG1,2); %// Remember to offset like we did before
-%vl_plotframe(fb2(:,MATCHES(2,:)));
-%axis image off; %// Take out the axes for better display
-
-
-%%-----------------------\\
-
 img1 = IMG1;
 img2 = IMG2;
 
@@ -41,8 +9,8 @@ temp_img = rgb2gray(img1);
 temp_img2 = rgb2gray(img2);
 pts1 = detectSURFFeatures(temp_img,"MetricThreshold",200);
 pts2 = detectSURFFeatures(temp_img2,"MetricThreshold",200);
-[ft1,vpoints1] = extractFeatures(rgb2gray(img1), pts1);
-[ft2,vpoints2] = extractFeatures(rgb2gray(img2),pts2);
+[ft1,vpoints1] = extractFeatures(temp_img, pts1);
+[ft2,vpoints2] = extractFeatures(temp_img2,pts2);
 
 %% Show detected points
 %imshow(img1);
@@ -56,8 +24,8 @@ pts2 = detectSURFFeatures(temp_img2,"MetricThreshold",200);
 %% Estimage Geometric Transform
 [tform,inlierIdx2, inlierIdx1] = estimateGeometricTransform(matchedPoints1, ...
     matchedPoints2, 'affine');
-tform = estimateGeometricTransform(inlierIdx1, ...
-    inlierIdx2, 'affine');
+%tform = estimateGeometricTransform(inlierIdx1, ...
+%    inlierIdx2, 'affine');
 
 rout = imref2d(size(IMG2));
 WarpedFrame = imwarp(IMG1,tform,'OutputView', rout);
