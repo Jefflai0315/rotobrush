@@ -1,9 +1,9 @@
 % MyRotobrush.m  - UMD CMSC426, Fall 2018
 % You should set these parameters yourself:
 WindowWidth = 80;  
-ProbMaskThreshold = 0.35; 
+ProbMaskThreshold = 0.55; 
 NumWindows= 40; 
-BoundaryWidth = 2;
+BoundaryWidth = 3;
 
 %% Load images by changing fpath and mask_number
 fpath = '../input';
@@ -59,7 +59,7 @@ ColorModels = ...
     initColorModels(images{1},mask,mask_outline,LocalWindows,BoundaryWidth,WindowWidth);
 
 % You should set these parameters yourself:
-fcutoff = 0.80;
+fcutoff = 0.4;
 SigmaMin = 2;
 SigmaMax = WindowWidth;
 R = 2;

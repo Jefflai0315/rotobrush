@@ -7,8 +7,8 @@ img2 = IMG2;
 %% Detect Transformation
 temp_img = rgb2gray(img1);
 temp_img2 = rgb2gray(img2);
-pts1 = detectSURFFeatures(temp_img,"MetricThreshold",200);
-pts2 = detectSURFFeatures(temp_img2,"MetricThreshold",200);
+pts1 = detectSURFFeatures(temp_img,"MetricThreshold",400);
+pts2 = detectSURFFeatures(temp_img2,"MetricThreshold",400);
 [ft1,vpoints1] = extractFeatures(temp_img, pts1);
 [ft2,vpoints2] = extractFeatures(temp_img2,pts2);
 

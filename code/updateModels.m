@@ -95,15 +95,15 @@ for j = 1 : size(LocalWindows,1)
 %%
 %if(size(X_fg2, 1) > size(X_fg2, 2) && size(X_bg2, 1) > size(X_bg2, 2))
 if (size(fgData,1)>3)
-    fgData = [fgData ; fgData ;ColorModels{j}.fgData1 ];
-    foregroundGMM = fitgmdist(fgData, 3, 'RegularizationValue', 0.1, 'Options', statset('MaxIter',1500,'TolFun',1e-5));  
+    fgData = [fgData;fgData ;ColorModels{j}.fgData1 ];
+    foregroundGMM = fitgmdist(fgData, 3, 'RegularizationValue', 0.01, 'Options', statset('MaxIter',1500,'TolFun',1e-5));  
 else
     foregroundGMM = ColorModels{j}.foreGMM;
 end
 
 if size(bgData,1) > 3
-    bgData = [bgData; bgData  ;ColorModels{j}.bgData1 ];
-    backgroundGMM = fitgmdist(bgData, 3, 'RegularizationValue', 0.1, 'Options', statset('MaxIter',1500,'TolFun',1e-5));   
+    bgData = [bgData ;bgData ;ColorModels{j}.bgData1 ];
+    backgroundGMM = fitgmdist(bgData, 3, 'RegularizationValue', 0.01, 'Options', statset('MaxIter',1500,'TolFun',1e-5));   
 else
     backgroundGMM = ColorModels{j}.backGMM;
 end
@@ -130,7 +130,7 @@ if (length(new)<length(old))
     weight = exp(-(dist.^2)/(WindowWidth*0.5)^2);
     denom = sum(sum(weight));
     numer = sum(sum(abs(locMask - pCXnew).*weight));
-    ColorModels{j}.ColorConfidence = 1 - numer/denom;
+    ColorModels{j}.Confidence = 1 - numer/denom;
     ColorModels{j}.foreGMM = foregroundGMM;
     ColorModels{j}.backGMM = backgroundGMM;
     ColorModels{j}.pcs(:,:) = pCXnew;
@@ -142,6 +142,7 @@ end
 %% Updating Shape Model
         
 % Calculating the new shape confidence based on simga_s 
+ColorModels{j}.Confidence
 if fcutoff < ColorModels{j}.Confidence
     SigmaS = SigmaMin + A*(ColorModels{j}.Confidence - fcutoff)^R;
 else
@@ -183,7 +184,7 @@ end
     %mask_outline = bwperim(Mask,4);
    % imshow(mask_outline);
     LocalWindows = NewLocalWindows;
-    Mask =bwareaopen(Mask, 60);
+    Mask =bwareaopen(Mask, 0);
     se = strel('line',2,0);
     Mask = imdilate(Mask,se);
     se = strel('line',2,90);
